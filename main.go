@@ -1049,7 +1049,7 @@ func main() {
 	_ = os.Setenv("TZ", "Asia/Shanghai")
 
 	bindHost := "0.0.0.0"
-	bindPort := 5000
+	bindPort := 3030
 
 	exe, _ := os.Executable()
 	pidFile = filepath.Join(filepath.Dir(exe), "app.pid")
@@ -1082,10 +1082,10 @@ func main() {
 	go scheduledTask()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleStatus)
-	mux.HandleFunc("/iptv", handleM3U8)
+	mux.HandleFunc("/status", handleStatus)
+	mux.HandleFunc("/", handleM3U8)
 	mux.HandleFunc("/txt", handleTxt)
-	mux.HandleFunc("/forceRetest", handleForceRetest)
+	mux.HandleFunc("/retest", handleForceRetest)
 
 	addr := fmt.Sprintf("%s:%d", bindHost, bindPort)
 	fmt.Printf("Listening on %s\n", addr)
