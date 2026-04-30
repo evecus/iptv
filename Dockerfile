@@ -21,6 +21,6 @@ WORKDIR /app
 COPY --from=builder /app/iptv .
 
 ENV TZ=Asia/Shanghai
-EXPOSE 5000
+EXPOSE 3030
 
 ENTRYPOINT ["/app/iptv"]
