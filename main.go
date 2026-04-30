@@ -213,7 +213,19 @@ func buildLogoURL(channelName string) string {
 	return LOGO_BASE_URL + url.PathEscape(channelName) + ".png"
 }
 
-func buildM3U8Entry(name, streamURL, groupTitle string) string {
+func getGroupTitle(name string) string {
+	upper := strings.ToUpper(name)
+	if strings.Contains(upper, "CCTV") {
+		return "央视"
+	}
+	if strings.Contains(name, "卫视") {
+		return "卫视"
+	}
+	return "其他"
+}
+
+func buildM3U8Entry(name, streamURL string) string {
+	groupTitle := getGroupTitle(name)
 	return fmt.Sprintf(
 		"#EXTINF:-1 tvg-name=\"%s\" tvg-logo=\"%s\" group-title=\"%s\",%s\n%s",
 		name, buildLogoURL(name), groupTitle, name, streamURL,
@@ -627,7 +639,7 @@ func processGenericChannels(channels []Channel, sourceIndex int) []Entry {
 		entries = append(entries, Entry{
 			Name:    name,
 			URL:     ch.URL,
-			Content: buildM3U8Entry(name, ch.URL, "IPTV"),
+			Content: buildM3U8Entry(name, ch.URL),
 			Index:   sourceIndex,
 		})
 	}
@@ -674,7 +686,7 @@ func processHsmdtvChannels(host string, sourceIndex int) []Entry {
 		entries = append(entries, Entry{
 			Name:    name,
 			URL:     newURL,
-			Content: buildM3U8Entry(name, newURL, "IPTV"),
+			Content: buildM3U8Entry(name, newURL),
 			Index:   sourceIndex,
 		})
 	}
@@ -934,7 +946,6 @@ func scheduledTask() {
 	m3u8Lines := []string{
 		fmt.Sprintf(`#EXTM3U x-tvg-url="%s"`, EPG_URL),
 		"#EXT-X-UPDATED: " + updateTimeStr,
-		fmt.Sprintf(`#EXTINF:-1 group-title="Update",%s`, dummyName) + "\n" + dummyURL,
 	}
 	for _, name := range channelOrder {
 		entries := groupedEntries[name]
@@ -943,6 +954,8 @@ func scheduledTask() {
 			m3u8Lines = append(m3u8Lines, e.Content)
 		}
 	}
+	// Update entry placed last
+	m3u8Lines = append(m3u8Lines, fmt.Sprintf(`#EXTINF:-1 group-title="Update",%s`, dummyName)+"\n"+dummyURL)
 	globalM3U8Content = strings.Join(m3u8Lines, "\n")
 	_ = os.WriteFile(CACHE_FILE, []byte(globalM3U8Content), 0644)
 
