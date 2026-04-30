@@ -4,7 +4,7 @@ ARG VERSION=dev
 WORKDIR /app
 
 COPY go.mod go.sum* ./
-RUN go mod download
+RUN go mod tidy
 
 COPY . .
 RUN CGO_ENABLED=0 go build \
