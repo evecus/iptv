@@ -4,10 +4,11 @@ ARG VERSION=dev
 WORKDIR /app
 
 COPY go.mod go.sum* ./
-RUN go mod tidy
+RUN go mod tidy 2>/dev/null; true
 
 COPY . .
-RUN CGO_ENABLED=0 go build \
+RUN go mod tidy && \
+    CGO_ENABLED=0 go build \
     -ldflags="-s -w -X main.VERSION=${VERSION}" \
     -o iptv .
 
