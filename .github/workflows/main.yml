@@ -24,16 +24,6 @@ jobs:
             goarch: amd64
           - goos: linux
             goarch: arm64
-          - goos: linux
-            goarch: arm
-            goarm: "7"
-          - goos: windows
-            goarch: amd64
-            suffix: ".exe"
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
 
     steps:
       - name: Checkout
@@ -95,7 +85,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
             VERSION=${{ github.event.inputs.tag }}
@@ -105,7 +95,7 @@ jobs:
 
   release:
     name: Release
-    needs: [build, docker]
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
