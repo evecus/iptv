@@ -24,3 +24,4 @@ ENV TZ=Asia/Shanghai
 EXPOSE 3030
 
 ENTRYPOINT ["/app/iptv"]
+CMD ["--port", "3030", "--workers", "20", "--top", "5", "--interval", "6h"]

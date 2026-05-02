@@ -129,12 +129,6 @@ func hostKey(rawURL string) string {
 	return scheme + "://" + u.Host
 }
 
-// SubscribeHostResult is the speed result for one unique host in a subscribe source.
-type SubscribeHostResult struct {
-	Key      string  // hostKey
-	Speed    float64 // -1 = failed / below threshold
-	SampleURL string
-}
 
 // TestSubscribeHosts groups channels by host, tests one sample URL per host,
 // returns a map[hostKey]speed. Hosts with speed < SPEED_LOW get -1.
