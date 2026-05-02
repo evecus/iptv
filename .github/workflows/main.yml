@@ -4,13 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.0.)'
+        description: 'Release tag (e.g. v1.0.5)'
         required: true
         type: string
 
 permissions:
   contents: write
-
 
 jobs:
   build:
@@ -24,6 +23,9 @@ jobs:
             goarch: amd64
           - goos: linux
             goarch: arm64
+          - goos: linux
+            goarch: arm
+            goarm: "7"
 
     steps:
       - name: Checkout
@@ -61,10 +63,56 @@ jobs:
           path: iptv-*
           retention-days: 1
 
+  docker:
+    name: Docker
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download linux binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+          pattern: iptv-linux-*
+
+      - name: Prepare binaries for Docker
+        run: |
+          mkdir -p docker-bin
+          cp dist/iptv-linux-amd64  docker-bin/iptv-linux-amd64
+          cp dist/iptv-linux-arm64  docker-bin/iptv-linux-arm64
+          cp dist/iptv-linux-armv7  docker-bin/iptv-linux-armv7
+          chmod +x docker-bin/*
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prebuilt
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.event.inputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
   release:
     name: Release
-    needs: build
+    needs: [build, docker]
     runs-on: ubuntu-latest
 
     steps:
@@ -73,9 +121,6 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-
-      - name: List files
-        run: ls -lh dist/
 
       - name: Create Git tag
         uses: actions/github-script@v7
@@ -104,35 +149,12 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.event.inputs.tag }}
             ```
 
-  docker:
-    name: Docker
-    needs: [build,release]
-    runs-on: ubuntu-latest
+            ## 环境变量
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          build-args: |
-            VERSION=${{ github.event.inputs.tag }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.event.inputs.tag }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+            | 环境变量 | 默认值 | 说明 |
+            |---|---|---|
+            | `PORT` | `3030` | 监听端口 |
+            | `WORKERS` | `20` | 并发测速数 |
+            | `TOP` | `5` | 每类型保留最佳源数量 |
+            | `INTERVAL` | `6h` | 更新间隔 |
+            | `URL1`~`URL20` | — | 自定义订阅源 |
