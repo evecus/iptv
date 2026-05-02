@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -57,11 +58,31 @@ var (
 	flagURLs     []string // subscribe URLs (--url1..url20 + env URL1..)
 )
 
+// envInt reads an env var as int, returning fallback if missing or invalid.
+func envInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
+// envStr reads an env var as string, returning fallback if empty.
+func envStr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func initFlags() {
-	flag.IntVar(&flagPort, "port", 3030, "HTTP listen port")
-	flag.IntVar(&flagWorkers, "workers", 20, "concurrent speed-test workers")
-	flag.IntVar(&flagTopN, "top", 5, "top N API sources per matchType")
-	flag.StringVar(&flagInterval, "interval", "6h", "update interval (e.g. 6h, 30m)")
+	// Env vars are used as defaults; CLI flags override them.
+	// Priority: CLI flag > ENV > hardcoded default
+	flag.IntVar(&flagPort, "port", envInt("PORT", 3030), "HTTP listen port (env: PORT)")
+	flag.IntVar(&flagWorkers, "workers", envInt("WORKERS", 20), "concurrent speed-test workers (env: WORKERS)")
+	flag.IntVar(&flagTopN, "top", envInt("TOP", 5), "top N API sources per matchType (env: TOP)")
+	flag.StringVar(&flagInterval, "interval", envStr("INTERVAL", "6h"), "update interval e.g. 6h, 30m (env: INTERVAL)")
 
 	urlPtrs := make([]*string, 20)
 	for i := 1; i <= 20; i++ {

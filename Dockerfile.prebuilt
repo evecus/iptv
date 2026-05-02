@@ -1,0 +1,37 @@
+# ── Pre-built binary stage (used by CI workflow) ──────────────────
+# Binaries are downloaded from release artifacts by the workflow,
+# placed in docker-bin/ before this Dockerfile is invoked.
+FROM alpine:3.19
+
+RUN apk add --no-cache tzdata ca-certificates
+
+WORKDIR /app
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+COPY docker-bin/ /tmp/bins/
+
+RUN set -e; \
+    case "${TARGETARCH}${TARGETVARIANT}" in \
+      amd64)   cp /tmp/bins/iptv-linux-amd64  /app/iptv ;; \
+      arm64)   cp /tmp/bins/iptv-linux-arm64  /app/iptv ;; \
+      armv7)   cp /tmp/bins/iptv-linux-armv7  /app/iptv ;; \
+      *)       echo "unsupported arch: ${TARGETARCH}${TARGETVARIANT}" && exit 1 ;; \
+    esac && \
+    chmod +x /app/iptv && \
+    rm -rf /tmp/bins
+
+ENV TZ=Asia/Shanghai
+
+# ── Runtime defaults (override with -e or compose env:) ──────────
+ENV PORT=3030
+ENV WORKERS=20
+ENV TOP=5
+ENV INTERVAL=6h
+# ENV URL1=http://your-subscribe.m3u
+
+EXPOSE 3030
+
+ENTRYPOINT ["/app/iptv"]
+CMD ["--port", "3030", "--workers", "20", "--top", "5", "--interval", "6h"]
