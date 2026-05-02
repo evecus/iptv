@@ -128,6 +128,34 @@ func mapToStandardName(name string, m map[string]string) string {
 	return name
 }
 
+// ── Satellite channel order ────────────────────────────────────────
+
+// weixiOrder defines the fixed display order for satellite (卫视) channels.
+// Channels not in this list are sorted after all listed channels, alphabetically.
+var weixiOrder = []string{
+	"湖南卫视", "东方卫视", "浙江卫视", "江苏卫视", "北京卫视",
+	"山东卫视", "河南卫视", "广东卫视", "安徽卫视", "深圳卫视",
+	"天津卫视", "江西卫视", "四川卫视", "湖北卫视", "重庆卫视",
+	"黑龙江卫视", "辽宁卫视", "河北卫视", "吉林卫视", "山西卫视",
+	"广西卫视", "云南卫视", "福建东南卫视", "贵州卫视", "陕西卫视",
+	"甘肃卫视", "内蒙古卫视", "新疆卫视", "宁夏卫视", "青海卫视",
+	"西藏卫视", "海南卫视", "兵团卫视",
+}
+
+// weixiSortIndex does a fuzzy lookup: it checks whether the channel name
+// *contains* any of the canonical satellite-channel keywords (e.g. "湖南卫视").
+// This handles names like "★湖南卫视HD" or "[湖南卫视]" that carry extra
+// decoration around the core keyword.
+// Returns (index, true) when matched, (-1, false) when not in the list.
+func weixiSortIndex(name string) (int, bool) {
+	for i, keyword := range weixiOrder {
+		if strings.Contains(name, keyword) {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
 // ── Sort key ──────────────────────────────────────────────────────
 
 func channelSortKey(name string) (int, float64, string) {
@@ -144,7 +172,12 @@ func channelSortKey(name string) (int, float64, string) {
 		return 0, 999, ""
 	}
 	if strings.Contains(name, "卫视") {
-		return 1, 0, name
+		if idx, ok := weixiSortIndex(name); ok {
+			// Known channel (fuzzy match): sort by fixed index, tiebreak by name
+			return 1, float64(idx), name
+		}
+		// Unknown satellite channel: sort after all known ones, alphabetically
+		return 1, float64(len(weixiOrder)), name
 	}
 	return 2, 0, name
 }
